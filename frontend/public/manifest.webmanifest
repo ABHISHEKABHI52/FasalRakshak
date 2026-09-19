@@ -1,0 +1,18 @@
+{
+  "name": "FasalRakshak — Scan. Predict. Protect.",
+  "short_name": "FasalRakshak",
+  "description": "AI-Powered Crop Health & Early Warning Platform (SIH26131)",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2f7d32",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

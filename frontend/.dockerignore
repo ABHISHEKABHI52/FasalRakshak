@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+coverage/
+npm_install.log
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FasalRakshak">
+  <rect width="64" height="64" rx="14" fill="#2f7d32" />
+  <path
+    d="M32 52c0-14 8-24 20-28-2 16-9 24-20 28z"
+    fill="#ffffff"
+    opacity="0.95"
+  />
+  <path d="M32 52C20 48 12 40 10 24c12 4 20 14 22 28z" fill="#dcefd9" />
+  <path d="M32 52V30" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+</svg>

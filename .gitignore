@@ -28,5 +28,14 @@ models/**/*.pth
 # Build & editor
 _build/
 *.log
+npm_install.log
 .DS_Store
 Thumbs.db
+
+# Local databases / migration check artifacts
+*.db
+*.sqlite
+*.sqlite3
+
+# TypeScript incremental build info
+*.tsbuildinfo

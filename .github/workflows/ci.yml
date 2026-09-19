@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (tests + migrations on PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: fasalrakshak
+          POSTGRES_PASSWORD: fasalrakshak
+          POSTGRES_DB: fasalrakshak
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fasalrakshak -d fasalrakshak"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ENV: development
+      JWT_SECRET: ci-secret-0123456789abcdefghijklmnop
+      DATABASE_URL: postgresql+asyncpg://fasalrakshak:fasalrakshak@localhost:5432/fasalrakshak
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Validate migrations (upgrade -> downgrade -> upgrade)
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
+      - name: Check schema matches models (autogenerate diff must be empty)
+        working-directory: backend
+        run: |
+          alembic check
+      - name: Run tests
+        working-directory: backend
+        run: pytest -q
+
+  frontend:
+    name: Frontend (typecheck, tests, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: TypeScript check
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Unit tests
+        working-directory: frontend
+        run: npm run test
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  compose-config:
+    name: Docker Compose configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: |
+          cp .env.example .env
+          docker compose config -q

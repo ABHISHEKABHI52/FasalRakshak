@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-white text-slate-900 antialiased;
+}
+
+/* Accessibility: interactive targets stay large enough for field use (docs/14 §1). */
+@layer base {
+  button,
+  a,
+  input,
+  select {
+    @apply min-h-[44px];
+  }
+}
