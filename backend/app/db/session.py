@@ -39,6 +39,11 @@ async def check_database_connection() -> bool:
         return False
 
 
+def is_postgres_dialect() -> bool:
+    """True on PostgreSQL. Used to pick PostGIS-only expressions (e.g. ST_AsText)."""
+    return engine.dialect.name == "postgresql"
+
+
 # Re-exported so routers can raise a uniform dependency-failure error.
 database_unavailable_error = ServiceUnavailableError(
     details={"component": "database"},

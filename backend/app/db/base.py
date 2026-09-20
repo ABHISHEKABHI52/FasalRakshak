@@ -3,7 +3,8 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, MetaData, Uuid
+from sqlalchemy import JSON, BigInteger, DateTime, Integer, MetaData, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 NAMING_CONVENTION = {
@@ -13,6 +14,11 @@ NAMING_CONVENTION = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
+
+# JSONB on PostgreSQL (docs/07); plain JSON on SQLite (tests/dev only).
+JSONType = JSONB().with_variant(JSON(), "sqlite")
+# BIGINT on PostgreSQL; INTEGER on SQLite (only INTEGER autoincrements there).
+BigIntType = BigInteger().with_variant(Integer(), "sqlite")
 
 
 def utcnow() -> datetime:
@@ -34,4 +40,12 @@ class UUIDPkMixin:
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class UpdatedAtMixin:
+    """Adds updated_at for rows whose state evolves after creation (docs/07)."""
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )

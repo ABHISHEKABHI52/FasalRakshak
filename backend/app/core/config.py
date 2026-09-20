@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     AUTH_RATE_LIMIT_MAX: int = 10
     AUTH_RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    # ---- Media / image upload (Phase 2; docs/08 §3, docs/12 §3) ----
+    MEDIA_DIR: str = "./media"
+    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB upload cap (docs/08 §11)
+    MAX_IMAGE_PIXELS: int = 24_000_000  # decompression-bomb guard (Pillow MAX_IMAGE_PIXELS)
+    MIN_IMAGE_DIMENSION: int = 224  # prototype minimum usable side in px (docs/00 §16)
+    STORED_IMAGE_MAX_DIMENSION: int = 1600  # downscale before storage
+    STORED_IMAGE_JPEG_QUALITY: int = 85
+
+    # ---- Image quality bands (PROTOTYPE thresholds — docs/00 §16, not validated) ----
+    QUALITY_BAND_GOOD_MIN: int = 80
+    QUALITY_BAND_ACCEPTABLE_MIN: int = 60
+    QUALITY_BAND_POOR_MIN: int = 40
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

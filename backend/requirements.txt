@@ -10,3 +10,8 @@ PyJWT>=2.10
 argon2-cffi>=23.1
 asyncpg>=0.30
 aiosqlite>=0.20
+# Phase 2 — image pipeline + geospatial column types (docs/09, docs/12 §3)
+pillow>=11.0
+geoalchemy2>=0.15
+# FastAPI multipart/form-data support (scan image upload — docs/08 §3)
+python-multipart>=0.0.9

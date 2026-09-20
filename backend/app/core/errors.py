@@ -53,6 +53,24 @@ class ConflictError(AppError):
     status_code, code, message_key = 409, "conflict", "errors.conflict"
 
 
+class PayloadTooLargeError(AppError):
+    """413 — upload exceeds the configured size cap (docs/08 §11)."""
+
+    status_code, code, message_key = 413, "payload_too_large", "errors.payload_too_large"
+
+
+class UnsupportedMediaError(AppError):
+    """415 — not a supported image format (docs/08 §11)."""
+
+    status_code, code, message_key = 415, "unsupported_media", "errors.unsupported_media"
+
+
+class QualityUnusableError(AppError):
+    """422 — image failed the quality gate; no diagnosis is produced (docs/08 §11, AC-01)."""
+
+    status_code, code, message_key = 422, "quality_unusable", "errors.quality_unusable"
+
+
 class UnprocessableError(AppError):
     status_code, code, message_key = 422, "unprocessable", "errors.unprocessable"
 
