@@ -3,7 +3,67 @@
 > Authoritative architecture: `docs/00`–`docs/22`. This file tracks **implementation** only.
 > Status labels used everywhere: **IMPLEMENTED** · **MVP** · **SIH DEMO** · **ADVANCED** · **FUTURE PHASE**.
 
+## Phase 2 — Farmer Core Loop (MVP): COMPLETE (verified)
+
+### Implemented
+
+| Area | What exists | Status |
+|---|---|---|
+| **Farm** | Model, schema, repository, service, API (`POST/GET/PATCH /api/v1/farms`), ownership enforcement, tests | IMPLEMENTED |
+| **Field** | Model, schema, repository, service, API (`POST/GET/PATCH /api/v1/fields`), PostGIS geometry, ownership enforcement, tests | IMPLEMENTED |
+| **Crop** | Canonical crop catalog entity, seed data (`database/seed_data.py`), retrieval API (`GET /api/v1/crops`), tests | IMPLEMENTED |
+| **CropCycle** | Model, schema, repository, service, API (`POST/GET/PATCH /api/v1/crop-cycles`), field ownership validation, tests | IMPLEMENTED |
+| **Scan** | Model, schema, repository, service, API (`POST /api/v1/scans`), `client_scan_uuid` idempotency, lifecycle states (`CREATED → IMAGE_UPLOADED → QUALITY_CHECKING → QUALITY_ACCEPTED → ANALYZING → COMPLETED`, plus `QUALITY_REJECTED`, `ANALYSIS_FAILED`, `INSUFFICIENT_EVIDENCE`), ownership enforcement, tests | IMPLEMENTED |
+| **ImageAsset** | Model, repository, secure local storage (`app/storage/local.py`), MIME/type/size/dimension validation, path traversal protection, safe generated filenames | IMPLEMENTED |
+| **Image Quality Engine** | `app/quality/engine.py` + `validation.py`: resolution, blur, brightness, darkness checks. Output: `quality_score` (0–100) + status (`GOOD` / `ACCEPTABLE` / `POOR` / `UNUSABLE`). Prototype thresholds labeled as such. Usable image blocks diagnosis. | IMPLEMENTED |
+| **AI Analysis Contract** | `app/analysis/service.py`: clean `ImageAnalysisService` interface accepting `ImageAsset + Crop + CropCycle + Field context`, returning `diagnosis_candidates`, `confidence`, `insufficient_evidence` flag, `model_version`, `inference_metadata`. Deterministic mock for tests only — clearly labeled mock/test behavior. | IMPLEMENTED (contract + mock; real model = FUTURE) |
+| **Insufficient Evidence** | First-class outcome throughout scan lifecycle. Quality gate blocks diagnosis on `UNUSABLE`. AI contract returns `insufficient_evidence` rather than forced diagnosis. | IMPLEMENTED |
+| **Scan History** | `GET /api/v1/scans` (owner-only, paginated), `GET /api/v1/scans/{id}` with quality result and analysis result. | IMPLEMENTED |
+| **Farmer Frontend Flow** | 8 dashboard pages: `/dashboard`, `/dashboard/farms`, `/dashboard/farms/[farmId]`, `/dashboard/farms/[farmId]/fields`, `/dashboard/farms/[farmId]/fields/[fieldId]`, `/dashboard/farms/[farmId]/fields/[fieldId]/cycles`, `/dashboard/farms/[farmId]/fields/[fieldId]/cycles/[cycleId]/scans`, `/dashboard/scans`. Login page, auth context, typed API client, responsive Tailwind UI. | IMPLEMENTED |
+| **Providers/Auth** | `frontend/src/app/providers.tsx` — client component wrapping `AuthProvider`. `layout.tsx` is server component with metadata exports. `auth_context.tsx` — in-memory session (Phase 2). | IMPLEMENTED |
+| **Tests** | Backend: 72 pytest tests (Phase 1: 33 + Phase 2: 39 covering farms, fields, crops, cycles, scans, idempotency, image pipeline, quality engine, ownership protection). Frontend: vitest 6/6. | IMPLEMENTED |
+| **Build** | TypeScript strict passes. Next.js production build passes (8/8 routes). | IMPLEMENTED |
+| **Docker Compose** | Unchanged from Phase 1 — `db`, `backend`, `frontend`. | IMPLEMENTED (authored; live run needs Docker) |
+| **CI** | Unchanged from Phase 1. | IMPLEMENTED |
+
+### Repair (this commit)
+
+- Fixed 5 corrupted dashboard page files (duplicated `use client`, duplicated component copies, malformed JSX)
+- Created `frontend/src/app/providers.tsx` (client component) and `frontend/src/app/layout.tsx` (server component with metadata) — resolved `useAuth must be used inside an AuthProvider` prerender error
+- Removed empty duplicate `frontend/src/lib/auth-context.tsx`
+- Added `.gitattributes` for consistent LF line endings
+- Removed temporary recovery scripts (`repair_frontend.py`, `frontend/write_*.py`)
+- Fixed `input` component / Button size root cause in shared UI component
+- Fixed 4 unused-variable TypeScript issues
+
+### Test results
+
+- **Backend pytest**: 72 passed
+- **Frontend vitest**: 6 passed
+- **TypeScript**: 0 errors
+- **Next.js build**: 8/8 routes compiled successfully
+- **git diff --check**: clean
+- **Working tree**: clean after commit `cf1968a`
+
+### Known limitations
+
+1. **Docker not executed locally** — CI covers live PostgreSQL + PostGIS + pgvector validation.
+2. Backend tests use isolated SQLite; PostgreSQL DDL verified offline via `alembic upgrade head --sql`.
+3. Register returns `roles` (M:N) vs `role` (singular) in docs/08 §1 — documented limitation.
+4. Login is phone/email + password only (no OTP, reset, verification).
+5. Refresh cookie `SameSite=Lax`; CSRF hardening = FUTURE PHASE.
+6. Rate limiting is in-process; Redis = FUTURE PHASE.
+7. Image quality thresholds are prototype values — not scientifically validated.
+8. `ImageAnalysisService` uses deterministic mock for tests; real AI model = FUTURE PHASE.
+9. No PWA service worker offline sync yet (Phase 2+).
+
+### Next recommended phase
+
+**Phase 3 — Field Validation & SIH Demo Polish:** real image dataset integration, crop-specific quality thresholds, scan status real-time updates, expanded farmer UI with result visualization, and SIH demo story rehearsal.
+
 ## Phase 1 — Platform Foundation: COMPLETE (verified)
+
+### Implemented
 
 ### Implemented
 
@@ -23,13 +83,22 @@
 | CI | GitHub Actions: backend tests + migrations against real PostgreSQL (upgrade → downgrade → upgrade + `alembic check`), frontend typecheck/tests/build, `docker compose config -q` | IMPLEMENTED |
 | Docker Compose | `db` (PostGIS + pgvector, healthcheck), `backend` (migrates then serves, healthcheck), `frontend`; service-name networking (no localhost inside containers) | IMPLEMENTED (authored; live run needs Docker — see limitations) |
 
-### Not implemented (deliberately, per Phase 1 scope)
+### Not implemented (as of Phase 1, since Phase 2 addressed the farmer core loop)
 
-Marked **TODO — FUTURE PHASE**: crop/field/crop-cycle domain tables and APIs, scan upload, image quality engine,
-AI vision pipeline, adaptive question engine, context fusion, risk engine, weather integration, GIS intelligence,
-RAG knowledge system, expert validation console, officer dashboard, notifications, offline sync, PWA service worker,
-UI session persistence/protected routes, SMS adapters, IoT/satellite inputs.
-See `docs/19_Future_Roadmap.md` and `docs/00` §§42–45 for sequencing. **No AI code exists yet.**
+The items below were listed as not implemented at Phase 1 time. They have since been
+implemented in **Phase 2** (see the Phase 2 table above): crop/field/crop-cycle domain
+tables and APIs, scan creation with `client_scan_uuid` idempotency, image upload with
+secure local storage, the image-quality engine, the AI analysis contract, scan history,
+and the farmer dashboard pages.
+
+Remaining **not implemented** per current scope:
+
+Marked **TODO — FUTURE PHASE**: disease/pest AI vision model training and inference,
+adaptive question engine, context fusion, risk engine, weather integration, GIS intelligence,
+RAG knowledge system, expert validation console, agriculture officer dashboard,
+notifications, offline sync, PWA service worker, UI session persistence/protected routes,
+SMS adapters, IoT/satellite inputs.
+See `docs/19_Future_Roadmap.md` and `docs/00` §§42–45 for sequencing.
 
 ## Commands
 
@@ -76,7 +145,4 @@ Key values: `DATABASE_URL` (`postgresql+asyncpg://…@db:5432/…` in Compose), 
 
 ## Next recommended phase
 
-**Phase 2 — Farmer core loop (MVP):** farm/field/crop-cycle domain tables + APIs, scan capture with client-side
-compression and idempotency, the image-quality gate, then the AI disease classifier behind the documented
-uncertainty / "insufficient evidence" contract — with tests at every step. Do not start until this status is
-reviewed.
+**Phase 3 — Field Validation & SIH Demo Polish:** real image dataset integration, crop-specific quality thresholds, scan status real-time updates, expanded farmer UI with result visualization, and SIH demo story rehearsal.
