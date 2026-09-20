@@ -145,3 +145,41 @@ async def test_scan_history_filter_by_field(client, farmer, farm_tree):
     ).json()["items"]
     assert len(for_field) == 1
     assert for_field[0]["field_id"] == other_field["id"]
+
+
+async def test_scan_upload_accepted_image_runs_analysis(demo_analysis, client, farmer, farm_tree, good_test_image):
+    """Accepted-quality image proceeds to deterministic demo analysis."""
+    scan = await client.post("/api/v1/scans", json=_scan_payload(farm_tree), headers=farmer["headers"])
+    scan_id = scan.json()["scan_id"]
+
+    resp = await client.post(
+        f"/api/v1/scans/{scan_id}/image",
+        files={"file": good_test_image},
+        headers=farmer["headers"],
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # Quality gate must pass
+    assert data["quality"]["category"] in ("good", "acceptable")
+    # Analysis must run with the demo classifier
+    assert data["analysis"]["model_name"] == "deterministic_demo_classifier"
+    assert data["analysis"]["is_mock"] is False
+
+
+async def test_scan_upload_rejected_image_blocks_analysis(demo_analysis, client, farmer, farm_tree, bad_test_image):
+    """Rejected-quality image must NOT proceed to analysis."""
+    scan = await client.post("/api/v1/scans", json=_scan_payload(farm_tree), headers=farmer["headers"])
+    scan_id = scan.json()["scan_id"]
+
+    resp = await client.post(
+        f"/api/v1/scans/{scan_id}/image",
+        files={"file": bad_test_image},
+        headers=farmer["headers"],
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # Quality gate must reject
+    assert data["quality"]["usable"] is False
+    # Analysis must NOT run
+    assert data["analysis"]["status"] == "insufficient_evidence"
+    assert data["analysis"]["model_name"] == "deterministic_demo_classifier"

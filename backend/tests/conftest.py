@@ -32,6 +32,7 @@ from app.analysis.service import (  # noqa: E402
     AnalysisCandidate,
     AnalysisOutcome,
     AnalysisStatus,
+    DeterministicDemoClassifier,
     get_analysis_service,
 )
 from app.api.deps import auth_rate_limiter  # noqa: E402
@@ -188,6 +189,15 @@ async def mock_analysis(client):
 
 
 @pytest_asyncio.fixture
+async def demo_analysis(client):
+    """Overrides the analysis service with the real deterministic demo classifier."""
+    stub = DeterministicDemoClassifier()
+    app.dependency_overrides[get_analysis_service] = lambda: stub
+    yield stub
+    app.dependency_overrides.pop(get_analysis_service, None)
+
+
+@pytest_asyncio.fixture
 async def farmer(client, db):
     """Register + log in a farmer via the real API; returns auth context."""
     payload = {
@@ -240,6 +250,38 @@ async def farm_tree(client, farmer):
     cycle = (
         await client.post(
             "/api/v1/crop-cycles",
+
+
+# ---------- image fixtures for upload tests ----------
+
+import io
+from PIL import Image as PILImage  # noqa: PLC0415
+
+
+def _make_test_image_bytes(kind: str = "good") -> bytes:  # noqa: PLC0415
+    """Create synthetic JPEG bytes for upload tests."""
+    if kind == "good":
+        img = PILImage.new("RGB", (800, 600), color=(100, 140, 100))
+    elif kind == "bad":
+        img = PILImage.new("RGB", (32, 32), color=(30, 30, 30))
+    else:
+        img = PILImage.new("RGB", (800, 600), color=(100, 140, 100))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+@pytest.fixture
+def good_test_image():
+    """BytesIO of a good-quality green test image."""
+    return io.BytesIO(_make_test_image_bytes("good"))
+
+
+@pytest.fixture
+def bad_test_image():
+    """BytesIO of a small dark unusable test image."""
+    return io.BytesIO(_make_test_image_bytes("bad"))
+
             json={
                 "field_id": field["id"],
                 "crop_id": tomato["id"],
